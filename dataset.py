@@ -8,22 +8,19 @@ import sys
 import numpy as np
 from PSFforIAM import *
 
+FILE_PATH = os.path.dirname(os.path.realpath(__file__))
+DATA_PATH = os.path.join(FILE_PATH, "data/")
+LABEL_DATA_PATH = os.path.join(DATA_PATH, "ascii/")
+STROKES_DATA_PATH = os.path.join(DATA_PATH, "lineStrokes/")
+
 class IAMDataset(Dataset):
-    def __init__(self, img_dir, label_dir, transform = None):
-        self.img_dir = img_dir
-        self.label_dir = label_dir
-        self.transform = transform
-        
+    def __init__(self):
+        self.signatures, self.labels = extraction("data/IAM/lineStrokes",'IAM')
 
     def __len__(self):
-        return len(self.img_labels)
+        return np.size(self.signatures)[0]
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = read_image(img_path)
-        label = self.img_labels.iloc[idx, 1]
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
+        image = self.signatures[idx]
+        label = self.labels[idx]
         return image, label
