@@ -16,6 +16,7 @@ from os import listdir
 from os.path import isfile, join
 import pickle
 import sys
+import pickle
 # import matplotlib.pyplot as plt
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -613,9 +614,92 @@ def extraction( path, format ):
 			pickle.dump(signatures, pickleOutput, protocol=pickle.HIGHEST_PROTOCOL)
 	
 	if format == "IAM":
+		count = 0
+		with open("trainsetsub.txt", "r") as trainFile:
+			for line in trainFile.readlines():
+				count += 1
+				print(str(count) + ' / 775 finished')
+				line = line.strip('\n')
+				line = line[1:]
+				for root, directories, files in sorted(os.walk(STROKES_DATA_PATH)):
+					files = sorted(files)
+					for file_name in files:
+						if line in file_name:
+							############# label data #############
+							# split our .xml (eg: a01-020w-01.xml -> a01-020w-01)
+							text_line_id = file_name[:-4]
+							label_text_line = find_textline_by_id(text_line_id)
+							if len(label_text_line) == 0: 
+								break
+							#print(label_text_line)
+							labels.append(label_text_line)
+							############# trajectory data #############
+							text_line_path = os.path.join(root, file_name)
+							#print(file_name)
+							#parser = ET.XMLParser(encoding = 'iso-8859-1')
+							e_tree = ET.parse(text_line_path)
+							e_tree = e_tree.getroot()
+							
+							signature = Signature()
+							#signature.id = text_line_id
 
+							curStrokeId = -1
+
+							#  first for loop: find start and end time stamps
+							for stroke in e_tree.findall('StrokeSet/Stroke'):
+								signature.strokes.append(Stroke(curStrokeId))
+								curStrokeId += 1
+								if curStrokeId == 0:
+									# used float instead of int here
+									signature.startTimeStamp = float(stroke.get('start_time'))
+								signature.endTimeStamp = float(stroke.get('end_time'))
+
+							mx = int(e_tree.findall('WhiteboardDescription/DiagonallyOppositeCoords')[0].get('x'))
+							my = int(e_tree.findall('WhiteboardDescription/DiagonallyOppositeCoords')[0].get('y'))
+
+							#  second for loop: record stroke and point info
+							curStrokeId = -1
+							for stroke in e_tree.findall('StrokeSet/Stroke'):
+								curStrokeId += 1
+								for point in stroke.findall('Point'):
+									if curStrokeId >= 0:
+										signature.strokes[curStrokeId].addRawPoint(
+											Point(int(point.get('x')),
+												my-int(point.get('y')),
+												float(point.get('time')) - signature.startTimeStamp,
+												signature.endTimeStamp - float(point.get('time'))))
+
+
+							signature.uniformSampling(signature.strokes)
+							signature.scaleByHeight(signature.strokes, signature.targetHeight,0)
+							signature.scaleByHeight(signature.strokes, signature.targetHeight,1)
+							# signature.showStrokes(signature.strokes, 0, True, None, signature.label)
+							# signature.showStrokes(signature.strokes, 1, True, None, signature.label)
+							# signature.showStrokes(signature.strokes, 2, True, None, signature.label)
+							signature.calculatePSFeatures(signature.strokes)
+							signature.features = signature.PSFeatures
+							signature.TEPSFeatures = None
+							signature.TimeFeatures = None
+							signatures.append(signature.features)
+							
+							'''
+							for c in range(7):
+								image = imshow(signature.features[:,:,c], True)
+								store_path = os.path.join(os.path.expanduser('~'),'Desktop','HTR_IAM','figures',text_line_id+'_PSF_'+str(c)+'.png')
+								if not cv2.imwrite(store_path,image):
+									raise Exception("Could not write image")
+							print("Finished a file ", file_name)
+							'''
+
+		with open('train_signatures.pickle', 'wb') as pickleOutput:
+			pickle.dump(signatures, pickleOutput, protocol=pickle.HIGHEST_PROTOCOL)
+		with open('train_labels.pickle', 'wb') as pickleOutput1:
+			pickle.dump(labels, pickleOutput1, protocol=pickle.HIGHEST_PROTOCOL)
+									
+'''
 		# parse STROKES (.xml)
 		for root, directories, files in sorted(os.walk(STROKES_DATA_PATH)):
+			directories = sorted(directories)
 			files = sorted(files)
 			for file_name in files:  # TextLine files
 				if file_name != ".DS_Store":
@@ -674,16 +758,17 @@ def extraction( path, format ):
 					signature.TEPSFeatures = None
 					signature.TimeFeatures = None
 					signatures.append(signature)
+					
 					for c in range(7):
 						image = imshow(signature.features[:,:,c], True)
-						store_path = os.path.join(os.path.expanduser('~'),'Desktop','IAMpreprocessing','figures',text_line_id+'_PSF_'+str(c)+'.png')
+						store_path = os.path.join(os.path.expanduser('~'),'Desktop','HTR_IAM','figures',text_line_id+'_PSF_'+str(c)+'.png')
 						if not cv2.imwrite(store_path,image):
 							raise Exception("Could not write image")
 					
 			print("Finished a file ", files)
+'''
 
-	
-	return np.array(signatures), np.array(labels)
+		
 
 
 def main():
