@@ -538,14 +538,14 @@ def extraction( path, format ):
 							signature.TimeFeatures = None
 							signatures.append(signature.features)
 							
-							'''
+							
 							for c in range(7):
 								image = imshow(signature.features[:,:,c], True)
 								store_path = os.path.join(os.path.expanduser('~'),'Desktop','HTR_IAM','figures',text_line_id+'_PSF_'+str(c)+'.png')
 								if not cv2.imwrite(store_path,image):
 									raise Exception("Could not write image")
 							print("Finished a file ", file_name)
-							'''
+							
 
 		with open('train_signatures.pickle', 'wb') as pickleOutput:
 			pickle.dump(signatures, pickleOutput, protocol=pickle.HIGHEST_PROTOCOL)
