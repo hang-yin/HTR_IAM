@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch import nn
 import math
-from data import preproc as pp
+from preproc import *
 
 # tokenize vocabulary in all labels
 class Tokenizer():
@@ -40,7 +40,8 @@ class Tokenizer():
         
         decoded = "".join([self.chars[int(x)] for x in text if x > -1])
         decoded = self.remove_tokens(decoded)
-        decoded = pp.text_standardize(decoded)
+        # use text_standardize function from pre_proc.py file
+        decoded = text_standardize(decoded)
 
         return decoded
 

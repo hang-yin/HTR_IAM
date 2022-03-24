@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from model import *
 from tokenizer import *
 import h5py
-from data import preproc as pp
+from preproc import *
 
 '''
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -95,8 +95,9 @@ class DataGenerator(Dataset):
         img = self.dataset[self.split]['dt'][i]
         
         #making image compatible with resnet
-        img = np.repeat(img[..., np.newaxis],3, -1)    
-        img = pp.normalization(img)
+        img = np.repeat(img[..., np.newaxis],3, -1)  
+        # use normalization function from preproc.py file  
+        img = normalization(img)
         
         if self.transform is not None:
             img = self.transform(img)
