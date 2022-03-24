@@ -19,15 +19,19 @@ import sys
 import pickle
 # import matplotlib.pyplot as plt
 
+# paths to data files
+# within data, there's "ascii" and "lineStrokes"
+# "ascii" folder contains the labels
+# "lineStrokes" folder contains the strokes
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(FILE_PATH, "data/")
 LABEL_DATA_PATH = os.path.join(DATA_PATH, "ascii/")
 STROKES_DATA_PATH = os.path.join(DATA_PATH, "lineStrokes/")
 
-
 ESCAPE_CHAR = '~!@#$%^&*()_+{}:"<>?`-=[];\',./|\n'
 
 
+# function for finding label of one whole textline
 def find_textline_by_id(filename):
 	"""
 	Inputs:
@@ -42,7 +46,6 @@ def find_textline_by_id(filename):
 	filepath = os.path.join(
 		LABEL_DATA_PATH, dir_name_L1, dir_name_L2, file_name)
 	line_counter = -2  # because line start after 2 new lines from "CSR:\n"
-
 	label = []
 	flag = False
 	for line in open(filepath, 'r'):
@@ -57,6 +60,7 @@ def find_textline_by_id(filename):
 			break
 	return label
 
+# function for showing image
 def imshow( grayMatrix, visiable=True, scale=2.0 ):
 	image = ( grayMatrix + 1.0 ) / 2.0 * 255
 	image[image == 127.5 ] = 127.5 
@@ -80,12 +84,11 @@ def dist( point_1, point_2 ):
 
 # calculate angle given point 1, point 2, point_3
 def angle( point_1, point_2, point_3 ):
-	
 	p_2_p_1_x 	= point_1.x - point_2.x
 	p_2_p_3_x 	= point_3.x - point_2.x
 	p_2_p_1_y 	= point_1.y - point_2.y 
 	p_2_p_3_y 	= point_3.y - point_2.y
-	
+
 	cos_value 	= ( p_2_p_1_x * p_2_p_3_x + p_2_p_1_y * p_2_p_3_y ) / math.sqrt( p_2_p_1_x ** 2 + p_2_p_1_y ** 2 ) / math.sqrt( p_2_p_3_x ** 2 + p_2_p_3_y ** 2 )
 	
 	# do projection 
@@ -96,6 +99,7 @@ def angle( point_1, point_2, point_3 ):
 		
 	return 	math.acos( cos_value )
 
+# define point class: x, y, time stamp, re time stamp, id, features
 class Point(object):
 	"""docstring for Point"""
 	def __init__(self, x=-1, y=-1, timeStamp=-1, reTimeStamp=-1):
@@ -107,6 +111,7 @@ class Point(object):
 		self.id = None
 		self.features = np.array([0.0] * 7)
 
+# define stroke class: id, raw points, sampled points, scaled points
 class Stroke(object):
 	"""docstring for Stroke"""
 	def __init__(self, id):
@@ -119,57 +124,7 @@ class Stroke(object):
 	def addRawPoint(self, point):
 		self.rawPoints.append(point)
 
-class KroneckerFeatures(object):
-	"""docstring for KroneckerFeatures"""
-	def __init__(self, width, height, order, points ):
-		super(KroneckerFeatures, self).__init__()
-		self.width = width
-		self.height = height
-		self.channel = 0
-		for i in range(order+1):
-			self.channel += int(math.pow(2,i))
-		self.shape = ( int(self.height), int(self.width), int(self.channel) )
-		self.tensor = np.zeros( self.shape ) 
-		self.pointFeatures = np.zeros( (len(points), int(self.channel)) )
-
-		# calculate products (discrete)
-		for (i, point) in enumerate(points):
-			# calculate order as 0
-			point.features[0] = 1.0
-			# calculate order as 1 and 2
-			if i != len(points) - 1:
-				point.features[1] = points[i+1].x - points[i].x
-				point.features[2] = points[i+1].y - points[i].y
-				point.features[3] = 0.5 * (point.features[1]**2)
-				point.features[4] = 0.5 * (point.features[1]*point.features[2])
-				point.features[5] = 0.5 * (point.features[2]*point.features[1])
-				point.features[6] = 0.5 * (point.features[2]**2)			
-			self.pointFeatures[i] = np.array(point.features)
-		
-		# Normalized to [-1,1] 
-		for c in range(self.channel):
-			maxValue = np.amax( self.pointFeatures[:,c] )
-			minValue = np.amin( self.pointFeatures[:,c] )
-
-			if maxValue != minValue:
-				self.pointFeatures[:,c] = 2.0*(self.pointFeatures[:,c]-minValue)/(maxValue-minValue)-1.0
-			else:
-				self.pointFeatures[:,c] /= maxValue
-
-		# reset point's features
-		for i in range(self.pointFeatures.shape[0]):
-			points[i].features = self.pointFeatures[i,:]
-
-		# set tensor:
-		for (i, point) in enumerate(points):
-			self.tensor[int(point.y)][int(point.x)][:] = point.features
-
-		for c in range(self.channel):
-			image = imshow(self.tensor[:,:,c], False)
-			cv2.imwrite('figures/psf_'+ str(c)+'.png',image)
-		
-		# exit(0)
-
+# define signature class
 class Signature(object):
 	"""docstring for Signature"""
 	def __init__(self, stroke=None):
@@ -192,7 +147,6 @@ class Signature(object):
 		self.userName = ""
 		self.strokes = list()
 		self.startTimeStamp = -1
-
 
 	def showStrokes(self, strokes, type=0, visible=True, scalar=None, label=1):
 		# determine the size of image
@@ -514,104 +468,6 @@ def extraction( path, format ):
 
 	signatures = list()
 	labels = list()
-
-	if format == "SVC":
-		outputPickle =  "data/pickled/" + "-".join(path.split("/")) + ".pickle"
-		signatureFiles = [ f for f in onlyfiles if f.endswith(".TXT") ]
-		for ( i, sFile ) in enumerate(signatureFiles):
-			if i % 50 == 0:
-				sys.stderr.write('.')
-			signature = Signature()
-			fileSplit = sFile.split('.')[0].split('S')
-			signature.localId = int(fileSplit[-1])
-			signature.userId = int(fileSplit[0].split('U')[-1])
-			if signature.localId <= 20:
-				signature.label = 1
-			else:
-				signature.label = 0
-
-			with open(path + "/" + sFile) as f:
-				print(path + "/" + sFile)
-				# curStrokeId = -1
-				# for line in f:
-				# 	linesplit = line.strip().split(" ")
-				# 	if len(linesplit) == 1:
-				# 		signature.id = int(linesplit[0])
-				# 	elif len(linesplit) >= 4:
-				# 		penStatus = int(linesplit[3])
-
-				# 		# IF penStatus is 0, then new stroke is created						
-				# 		if penStatus == 0:
-				# 			signature.strokes.append(Stroke(curStrokeId))
-				# 			curStrokeId += 1
-				# 			if curStrokeId == 0:
-				# 				signature.startTimeStamp = int(linesplit[2])
-						
-				# 		if curStrokeId >= 0:
-				# 			signature.strokes[curStrokeId].addRawPoint( Point(float(linesplit[0]), float(linesplit[1]), int(linesplit[2]) - signature.startTimeStamp ) )
-				
-				curStrokeId = -1
-				for line in f:
-					linesplit = line.strip().split(" ")
-					if len(linesplit) == 1:
-						signature.id = int(linesplit[0])
-					elif len(linesplit) >= 4:
-						penStatus = int(linesplit[3])
-						# IF penStatus is 0, then new stroke is created						
-						if penStatus == 0:
-							signature.strokes.append(Stroke(curStrokeId))
-							curStrokeId += 1
-							if curStrokeId == 0:
-								signature.startTimeStamp = int(linesplit[2])
-						signature.endTimeStamp = int(linesplit[2])
-				
-				f.seek(0)
-				curStrokeId = -1
-				for line in f:
-					linesplit = line.strip().split(" ")
-					#print(linesplit)
-					if len(linesplit) == 1:
-						signature.id = int(linesplit[0])
-					elif len(linesplit) >= 4:
-						penStatus = int(linesplit[3])
-						# IF penStatus is 0, then new stroke is created						
-						if penStatus == 0:
-							curStrokeId += 1
-
-						if curStrokeId >= 0:
-							signature.strokes[curStrokeId].addRawPoint( \
-								Point(float(linesplit[0]), \
-									  float(linesplit[1]), \
-									  int(linesplit[2]) - signature.startTimeStamp,
-									  signature.endTimeStamp - int(linesplit[2]) ) )
-
-				# uniform sampling raw points
-				signature.uniformSampling(signature.strokes)
-				signature.scaleByHeight(signature.strokes, signature.targetHeight,0)
-				signature.scaleByHeight(signature.strokes, signature.targetHeight,1)
-				# signature.showStrokes(signature.strokes, 0, True, None, signature.label)
-				# signature.showStrokes(signature.strokes, 1, True, None, signature.label)
-				# signature.showStrokes(signature.strokes, 2, True, None, signature.label)
-
-				# at first, calculate PSF features
-				# signature.calculateTEPSFeatures(signature.strokes)
-				signature.calculatePSFeatures(signature.strokes)
-				# signature.calculateTimeEncodedFeatures(signature.strokes)
-				# signature.calculatrDFTFeatures(signature.strokes)
-				signature.features = signature.PSFeatures
-				# signature.features = signature.TEPSFeatures
-				# signature.features = np.concatenate((signature.PSFeatures, signature.TimeFeatures, signature.DFTFeatures), axis=2)
-				signature.TEPSFeatures = None
-				signature.TimeFeatures = None
-				signatures.append(signature)
-				for c in range(7):
-					image = imshow(signature.features[:,:,c], True)
-					cv2.imwrite('figures/'+sFile+'_PSF_'+ str(c)+'.png',image)
-				# exit(0)
-
-		# print("line 535")
-		with open(outputPickle, 'wb') as pickleOutput:
-			pickle.dump(signatures, pickleOutput, protocol=pickle.HIGHEST_PROTOCOL)
 	
 	if format == "IAM":
 		count = 0
