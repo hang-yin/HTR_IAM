@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import numpy as np
+from pos_encoding import *
 
 '''
 class CNTRANSFORMER(nn.Module):
