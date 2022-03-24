@@ -8,7 +8,7 @@ import numpy as np
 from PSFforIAM import *
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-from dcback import *
+from model import *
 
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(FILE_PATH, "data/")

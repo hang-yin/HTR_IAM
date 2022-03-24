@@ -20,20 +20,20 @@ class CNTRANSFORMER(nn.Module):
 
 class HTR(nn.Module):
 
-    def __init__(self, vocab_len, hidden_dim, nheads,
-                 num_encoder_layers, num_decoder_layers):
+    def __init__(self, vocab_len, hidden_dim, nheads, num_encoder_layers, num_decoder_layers):
         super().__init__()
 
         # create ResNet-101 backbone
         self.backbone = resnet101()
-        del self.backbone.fc
+        # take out the last fully connected layer
+        del self.backbone.fc 
 
         # create conversion layer
         self.conv = nn.Conv2d(2048, hidden_dim, 1)
 
         # create a default PyTorch transformer
-        self.transformer = nn.Transformer(
-            hidden_dim, nheads, num_encoder_layers, num_decoder_layers)
+        self.transformer = nn.Transformer(hidden_dim, nheads, num_encoder_layers, num_decoder_layers)
+
 
         # prediction heads with length of vocab
         # DETR used basic 3 layer MLP for output
@@ -75,7 +75,7 @@ class HTR(nn.Module):
         # propagate inputs through ResNet-101 up to avg-pool layer
         x = self.get_feature(inputs)
 
-        # convert from 2048 to 256 feature planes for the transformer
+        # convert from 2048 to 256 (hidden dimension) feature planes for the transformer
         h = self.conv(x)
 
         # construct positional encodings
