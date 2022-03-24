@@ -9,7 +9,11 @@ from PSFforIAM import *
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from model import *
+from tokenizer import *
+import h5py
+from data import preproc as pp
 
+'''
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(FILE_PATH, "data/")
 LABEL_DATA_PATH = os.path.join(DATA_PATH, "ascii/")
@@ -35,6 +39,7 @@ class IAMDataset(Dataset):
 
 sub_dataset = IAMDataset('train_signatures.pickle', 'train_labels.pickle')
 sub_dataloader  = DataLoader(sub_dataset, batch_size = 1, shuffle = True)
+'''
 
 '''
 full_dataset = IAMDataset()
@@ -45,7 +50,7 @@ train_set, test_set = torch.utils.data.random_split(full_dataset, [train_size, t
 train_dataloader = DataLoader(train_set, batch_size=1, shuffle=True)
 test_dataloader = DataLoader(test_set, batch_size=1, shuffle=True)
 '''
-
+'''
 model = CNTRANSFORMER()
 for train_images, train_labels in sub_dataloader:
     sample_image = train_images[0]
@@ -55,3 +60,55 @@ for train_images, train_labels in sub_dataloader:
     #train_images.float()
     model.forward(train_images)
     break
+'''
+
+class DataGenerator(Dataset):
+    """Generator class with data streaming"""
+
+    def __init__(self, source,charset, max_text_length, split, transform):
+        self.tokenizer = Tokenizer(charset, max_text_length)
+        self.transform = transform
+        
+        self.split = split
+        self.dataset = dict()
+
+        with h5py.File(source, "r") as f:
+            self.dataset[self.split] = dict()
+
+            self.dataset[self.split]['dt'] = np.array(f[self.split]['dt'])
+            self.dataset[self.split]['gt'] = np.array(f[self.split]['gt'])
+          
+            randomize = np.arange(len(self.dataset[self.split]['gt']))
+            np.random.seed(42)
+            np.random.shuffle(randomize)
+
+            self.dataset[self.split]['dt'] = self.dataset[self.split]['dt'][randomize]
+            self.dataset[self.split]['gt'] = self.dataset[self.split]['gt'][randomize]
+
+            # decode sentences from byte
+            self.dataset[self.split]['gt'] = [x.decode() for x in self.dataset[self.split]['gt']]
+            
+        self.size = len(self.dataset[self.split]['gt'])
+
+
+    def __getitem__(self, i):
+        img = self.dataset[self.split]['dt'][i]
+        
+        #making image compatible with resnet
+        img = np.repeat(img[..., np.newaxis],3, -1)    
+        img = pp.normalization(img)
+        
+        if self.transform is not None:
+            img = self.transform(img)
+
+        y_train = self.tokenizer.encode(self.dataset[self.split]['gt'][i]) 
+        
+        #padding till max length
+        y_train = np.pad(y_train, (0, self.tokenizer.maxlen - len(y_train)))
+
+        gt = torch.Tensor(y_train)
+
+        return img, gt          
+
+    def __len__(self):
+      return self.size

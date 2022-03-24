@@ -4,6 +4,7 @@ from torch import nn
 import math
 from data import preproc as pp
 
+# tokenize vocabulary in all labels
 class Tokenizer():
     """Manager tokens functions and charset/dictionary properties"""
 
