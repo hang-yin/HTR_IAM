@@ -55,11 +55,21 @@ class Dataset():
         dataset = dict()
 
         # loop through all three partitions
+        for i in self.partitions:
+            # initialize one dataset entry, including data and groundtruth
+            dataset[i] = {"dt": [], "gt": []}
+            # use extraction function from PSFforIAM file to extract signatures and labels
+            signatures, labels = extraction(paths[i],"IAM")
+            dataset[i]['dt'] = signatures
+            dataset[i]['gt'] = labels
+
+        return dataset
+
+        '''
+        # loop through all three partitions
         for i in self.partitions: 
             # initialize one dataset entry, including data and groundtruth
             dataset[i] = {"dt": [], "gt": []}
-
-            
 
         lines = open(os.path.join(self.source, "ascii", "lines.txt")).read().splitlines()
         gt_dict = dict()
@@ -74,13 +84,9 @@ class Dataset():
                 gt_dict[split[0]] = " ".join(split[8::]).replace("|", " ")
 
         dataset = dict()
+        '''
 
-        for i in self.partitions:
-            dataset[i] = {"dt": [], "gt": []}
-            # use extraction function from PSFforIAM file to extract signatures and labels
-            signatures, labels = extraction(paths[i],"IAM")
-            dataset[i]['dt'] = signatures
-            dataset[i]['gt'] = labels
+        
 
             '''
             for line in paths[i]:
@@ -97,7 +103,7 @@ class Dataset():
                     pass
             '''
 
-        return dataset
+        
 
     '''
     def preprocess_partitions(self, input_size):
