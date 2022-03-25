@@ -471,7 +471,7 @@ def extraction( path, format ):
 	
 	if format == "IAM":
 		count = 0
-		with open("trainsetsub.txt", "r") as trainFile:
+		with open(path, "r") as trainFile:
 			for line in trainFile.readlines():
 				count += 1
 				print(str(count) + ' / 775 finished')
@@ -485,6 +485,7 @@ def extraction( path, format ):
 							# split our .xml (eg: a01-020w-01.xml -> a01-020w-01)
 							text_line_id = file_name[:-4]
 							label_text_line = find_textline_by_id(text_line_id)
+							# print(label_text_line)
 							if len(label_text_line) == 0: 
 								break
 							#print(label_text_line)
@@ -538,7 +539,8 @@ def extraction( path, format ):
 							signature.TimeFeatures = None
 							signatures.append(signature.features)
 							
-							print(np.shape(signature.features))
+
+							# print(np.shape(signature.features))
 							'''
 							for c in range(7):
 								image = imshow(signature.features[:,:,c], True)
@@ -547,7 +549,7 @@ def extraction( path, format ):
 									raise Exception("Could not write image")
 							'''
 							print("Finished a file ", file_name)
-							
+		return [signatures, labels]
 		'''
 		with open('train_signatures.pickle', 'wb') as pickleOutput:
 			pickle.dump(signatures, pickleOutput, protocol=pickle.HIGHEST_PROTOCOL)
