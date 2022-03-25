@@ -24,6 +24,8 @@ def main():
 
     ESCAPE_CHAR = '~!@#$%^&*()_+{}:"<>?`-=[];\',./|\n'
 
+    source_path = os.path.join(".", "data", "iam.hdf5")
+
     #extract PSF features and store them in a HDF5 file
     print("Extracting PSF features.")
 
