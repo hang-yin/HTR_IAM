@@ -12,6 +12,7 @@ from model import *
 from tokenizer import *
 import h5py
 from preproc import *
+import pickle
 
 '''
 FILE_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -72,6 +73,31 @@ class DataGenerator(Dataset):
         self.split = split
         self.dataset = dict()
 
+
+        with open(f"{split}_signatures.pickle", 'rb') as data1:
+            signatures = pickle.load(data1)
+        with open(f"{split}_labels.pickle", 'rb') as data2:
+            labels = pickle.load(data2)
+        
+        self.dataset[self.split] = dict()
+        self.dataset[self.split]['dt'] = signatures
+        self.dataset[self.split]['gt'] = labels
+
+        # randomize data sequence
+        randomize = np.arange(len(self.dataset[self.split]['gt']))
+        np.random.seed(42)
+        np.random.shuffle(randomize)
+
+        self.dataset[self.split]['dt'] = self.dataset[self.split]['dt'][randomize]
+        self.dataset[self.split]['gt'] = self.dataset[self.split]['gt'][randomize]
+
+        # do I need to do tokenizer.encode in reader file and decode it here?
+        # assumption: we need to encode, decode, and encode again because 
+        # we need max_length from first pass so that we can add padding
+
+        self.size = len(self.dataset[self.split]['gt'])
+        
+        '''
         with h5py.File(source, "r") as f:
             self.dataset[self.split] = dict()
 
@@ -89,18 +115,22 @@ class DataGenerator(Dataset):
             self.dataset[self.split]['gt'] = [x.decode() for x in self.dataset[self.split]['gt']]
             
         self.size = len(self.dataset[self.split]['gt'])
+        '''
 
 
     def __getitem__(self, i):
-        img = self.dataset[self.split]['dt'][i]
+
+
+        signature = self.dataset[self.split]['dt'][i]
         
         #making image compatible with resnet
-        img = np.repeat(img[..., np.newaxis],3, -1)  
+        # img = np.repeat(img[..., np.newaxis],3, -1)  # -1 means last axis
+
         # use normalization function from preproc.py file  
-        img = normalization(img)
+        # img = normalization(img)
         
         if self.transform is not None:
-            img = self.transform(img)
+            signature = self.transform(signature)
 
         y_train = self.tokenizer.encode(self.dataset[self.split]['gt'][i]) 
         
@@ -109,7 +139,8 @@ class DataGenerator(Dataset):
 
         gt = torch.Tensor(y_train)
 
-        return img, gt          
+        # from here, the output size of signature is [128, width, 7]
+        return signature, gt          
 
     def __len__(self):
       return self.size

@@ -6,7 +6,6 @@ import xml.etree.ElementTree as ET
 
 from glob import glob
 from tqdm import tqdm
-from data import preproc as pp
 from functools import partial
 from PSFforIAM import *
 
@@ -25,7 +24,8 @@ class Dataset():
         self.source = source
         self.name = name
         self.dataset = None
-        self.partitions = ['train', 'valid', 'test']
+        #self.partitions = ['train', 'valid', 'test']
+        self.partitions = ['train']
 
     def read_partitions(self):
         """Read images and sentences from dataset"""
@@ -47,9 +47,15 @@ class Dataset():
 
         # define paths to train, validation, and test set info
         pt_path = os.path.join(self.source, "partition_info")
+
         paths = {"train": open(os.path.join(pt_path, "trainsetsub.txt")).read().splitlines(),
                  "valid": open(os.path.join(pt_path, "validation1.txt")).read().splitlines(),
                  "test": open(os.path.join(pt_path, "test.txt")).read().splitlines()}
+
+        info_paths = {"train": os.path.join(pt_path, "trainsetsub.txt"),
+                      "valid": os.path.join(pt_path, "validation1.txt"),
+                      "test": os.path.join(pt_path, "test.txt")}
+
         
         # initialize dataset as an empty dictionary
         dataset = dict()
@@ -59,7 +65,7 @@ class Dataset():
             # initialize one dataset entry, including data and groundtruth
             dataset[i] = {"dt": [], "gt": []}
             # use extraction function from PSFforIAM file to extract signatures and labels
-            signatures, labels = extraction(paths[i],"IAM")
+            signatures, labels = extraction(info_paths[i],"IAM")
             dataset[i]['dt'] = signatures
             dataset[i]['gt'] = labels
 
@@ -84,11 +90,7 @@ class Dataset():
                 gt_dict[split[0]] = " ".join(split[8::]).replace("|", " ")
 
         dataset = dict()
-        '''
 
-        
-
-            '''
             for line in paths[i]:
                 try:
                     split = line.split("-")
@@ -101,11 +103,7 @@ class Dataset():
                     dataset[i]['dt'].append(img_path)
                 except KeyError:
                     pass
-            '''
 
-        
-
-    '''
     def preprocess_partitions(self, input_size):
         #Preprocess images and sentences from partitions
 
@@ -132,14 +130,10 @@ class Dataset():
                 pool.join()
 
             self.dataset[y]['dt'] = results
-    '''
-    
-    
 
-    '''
     @staticmethod
     def check_text(text):
-        """Make sure text has more characters instead of punctuation marks"""
+        #Make sure text has more characters instead of punctuation marks
 
         strip_punc = text.strip(string.punctuation).strip()
         no_punc = text.translate(str.maketrans("", "", string.punctuation)).strip()
